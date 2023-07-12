@@ -25,9 +25,6 @@ aether noise
 (
 //fork{
 
-
-
-
 (
 Ndef('granulate_input').addSpec(
 	// \recLevel, [0,1],
@@ -141,7 +138,7 @@ Ndef('granulate_input', {|
 
 
 
-	input = SoundIn.ar([input1,input2]) * inAmp * recGate;
+	input = SoundIn.ar([input1,input1]) * inAmp * recGate;
 
 	// writing granulated + input back to grain buffer
 	buf.do { |b i|
@@ -163,6 +160,7 @@ Ndef('granulate_input', {|
 	]) * outAmp;
 
 	signal.tanh;
+	signal = Mix(signal);
 	//Out.ar(0, signal.tanh);
 
 });
@@ -277,7 +275,8 @@ Ndef('barr_verb_one', { arg
 	// signal.debug(\signal);
 	signal * \tail.kr(1);
 
-	signal = (signal * mix ) + (signalIn * (1-mix));
+	signal = (signal * mix ) + (( signalIn!2) * (1-mix));
+
 
 
 
@@ -306,6 +305,7 @@ Ndef( 'barr_verb_one' ).addSpec(
 	\damping, [0.0,1],
 );
 
+
 Ndef( 'barr_verb_one' ).play;
 
 Ndef('barr_verb_one').set('damping', 0.35449735449735, 'level_1', 1.0, 'tail', 1.0, 'inputLPF', 0.12169312169312, 'inDiffusion', 0.36078452971593, 'level_2', 0.079365079365079, 'level_3', 0.058201058201058, 'decay_sec', 0.37037037037037, 'inputHPF', 35.892048805946, 'decay1_sec', 0.29100529100529, 'feedback', 0.95238095238, 'level_0', -0.87301587301587);
@@ -329,7 +329,7 @@ MIDIIn.connectAll;
 //2.0.wait;
 
 ~overlap_spec = [0.01,5.0,\exp,0.001].asSpec;
-~tfreq_spec = [22050,1,\exp,0.001].asSpec;
+~tfreq_spec = [22050*0.001,1,-4,0.001].asSpec;
 ~offset_spec = [0.01,1,\linear,0.001].asSpec;
 
 ~ratemf_spec = [0.0,2000,\linear,0.001].asSpec;
@@ -341,7 +341,7 @@ MIDIIn.connectAll;
 ~grain_settings = 0;
 (
 MIDIdef.cc(\nanoKtest, {| val num chan src|
-	[num,val].postln;
+	[num,val, src].postln;
 
 	case
 	//button for changing recinput
@@ -353,7 +353,9 @@ MIDIdef.cc(\nanoKtest, {| val num chan src|
 		{ ~recinput_switch == 0 } { "radio".postln;
 			Ndef('granulate_input').set(\input1, 4, \input2, 5); }
 		{ ~recinput_switch == 1 } {"guitar".postln;
-			Ndef('granulate_input').set(\input1, 6, \input2, 7); }
+			Ndef('granulate_input').set(\input1, 0, \input2, 0);
+
+		}
 		{ ~recinput_switch == 2 } { "recorder microphone".postln;
 			Ndef('granulate_input').set(\input1, 2, \input2, 2); };
 
@@ -403,6 +405,7 @@ MIDIdef.cc(\nanoKtest, {| val num chan src|
 		Ndef('barr_verb_one').set('mix', (val/127) );
 
 	}
+
 	{ num == 32 } {
 		Ndef(\granulate_input).set(\overlap, ~overlap_spec.map(val/127), \tFreq, ~tfreq_spec.map(val/127); ); }
 	{ num == 33 } {
@@ -418,7 +421,17 @@ MIDIdef.cc(\nanoKtest, {| val num chan src|
 
 
 
-});
+}, srcID:2097152);
+
+
+MIDIdef.cc(\BOSS_footpedal, {| val num chan src|
+	[num,val,chan, src].postln;
+
+	case
+	{ num == 11 } {
+		Ndef(\granulate_input).set(\overlap, ~overlap_spec.map(val/127), \tFreq, ~tfreq_spec.map(val/127); ); }
+
+},srcID:8388608);
 
 
 );
@@ -427,4 +440,6 @@ MIDIdef.cc(\nanoKtest, {| val num chan src|
 //}
 );
 
+
+Ndef('granulate_input').set(\rate, 0.25);
 
